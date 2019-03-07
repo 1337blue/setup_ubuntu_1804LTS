@@ -1,0 +1,68 @@
+- name: Setup working environment
+  hosts: localhost
+
+  tasks:
+    - name: Install Packages
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:
+        - awscli
+        - docker-compose
+        - docker.io
+        - jq
+        - software-properties-common 
+        - apt-transport-https
+        - wget
+        - net-tools
+
+    - name: Import Opera GPG keys
+      apt_key:
+        url: https://deb.opera.com/archive.key
+ 
+    - name: Enable Opera repo
+      apt_repository:
+        repo: deb [arch=i386,amd64] https://deb.opera.com/opera-stable/ stable non-free
+ 
+    - name: Import MS GPG key
+      apt_key:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+ 
+    - name: Enable VS Code repo
+      apt_repository:
+        repo: deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main
+ 
+    - name: Install non standard packages
+      apt:
+        name: "{{ packages }}"
+      vars:
+        packages:   
+        - code
+        - opera-stable
+    
+    - name: fetch VS Code extensions
+      become: yes
+      become_user: ubuntu
+      shell: code --list-extensions
+      register: vs_code_extensions
+
+    - name: Install VS Code extensions
+      become: yes
+      become_user: ubuntu
+      shell: code --install-extension "{{ item }}"
+      when: item not in vs_code_extensions.stdout
+      with_items:
+      - DavidAnson.vscode-markdownlint
+      - dbaeumer.vscode-eslint
+      - GitHub.vscode-pull-request-github
+      - HookyQR.beautify
+      - jmMeessen.jenkins-declarative-support
+      - magicstack.MagicPython
+      - mauve.terraform
+      - ms-python.python
+      - ms-vscode.notepadplusplus-keybindings
+      - PeterJausovec.vscode-docker
+      - redhat.vscode-yaml
+      - tht13.python
+      - vscodevim.vim
+       
