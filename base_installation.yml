@@ -15,6 +15,10 @@
         - apt-transport-https
         - wget
         - net-tools
+        - vim
+        - xvnc4viewer
+        - htop
+        - tree
 
     - name: Import Opera GPG keys
       apt_key:
@@ -55,7 +59,6 @@
       - DavidAnson.vscode-markdownlint
       - dbaeumer.vscode-eslint
       - eamodio.gitlens
-      - GitHub.vscode-pull-request-github
       - HookyQR.beautify
       - janjoerke.jenkins-pipeline-linter-connector
       - jmMeessen.jenkins-declarative-support
@@ -63,9 +66,14 @@
       - mauve.terraform
       - mhutchie.git-graph
       - ms-python.python
-      - ms-vscode.notepadplusplus-keybindings
       - PeterJausovec.vscode-docker
       - redhat.vscode-yaml
       - teledemic.branch-warnings
       - tht13.python
       - vscodevim.vim
+
+    - name: Increase watch limit for VSCode
+      lineinfile:
+        path: /etc/sysctl.conf
+        state: present
+        line: fs.inotify.max_user_watches=524288
