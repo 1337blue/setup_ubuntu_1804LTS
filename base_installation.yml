@@ -19,6 +19,13 @@
         - xvnc4viewer
         - htop
         - tree
+        - iotop
+        - virtualbox
+
+    # vagrant depends on virtualbox
+    - name: Install Vagrant
+      apt:
+        name: vagrant
 
     - name: Import Opera GPG keys
       apt_key:
@@ -27,6 +34,7 @@
     - name: Enable Opera repo
       apt_repository:
         repo: deb [arch=i386,amd64] https://deb.opera.com/opera-stable/ stable non-free
+        filename: opera-stable
  
     - name: Import MS GPG key
       apt_key:
@@ -35,6 +43,7 @@
     - name: Enable VS Code repo
       apt_repository:
         repo: deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main
+        filename: vscode
  
     - name: Install non standard packages
       apt:
@@ -58,7 +67,7 @@
       with_items:
       - DavidAnson.vscode-markdownlint
       - dbaeumer.vscode-eslint
-      - eamodio.gitlens
+      - eamodio.gitlens 
       - HookyQR.beautify
       - janjoerke.jenkins-pipeline-linter-connector
       - jmMeessen.jenkins-declarative-support
@@ -66,7 +75,7 @@
       - mauve.terraform
       - mhutchie.git-graph
       - ms-python.python
-      - PeterJausovec.vscode-docker
+      - ms-azuretools.vscode-docker
       - redhat.vscode-yaml
       - teledemic.branch-warnings
       - tht13.python
@@ -77,3 +86,4 @@
         path: /etc/sysctl.conf
         state: present
         line: fs.inotify.max_user_watches=524288
+
