@@ -1,5 +1,11 @@
 - name: Setup working environment
   hosts: localhost
+  vars:
+    slack_version: 4.0.0
+    repos:
+      enpass: deb https://apt.enpass.io/ stable main
+      opera-stable: deb [arch=i386,amd64] https://deb.opera.com/opera-stable/ stable non-free
+      vscode: deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main
 
   tasks:
     - name: Install Packages
@@ -21,37 +27,45 @@
         - tree
         - iotop
         - virtualbox
+        - linux-headers-generic
 
     # vagrant depends on virtualbox
     - name: Install Vagrant
       apt:
         name: vagrant
 
-    - name: Import Opera GPG keys
+    - name: Import GPG keys
       apt_key:
-        url: https://deb.opera.com/archive.key
+        url: "{{ item }}"
+      with_items:   
+        - https://packages.microsoft.com/keys/microsoft.asc
+        - https://deb.opera.com/archive.key
+        - https://apt.enpass.io/keys/enpass-linux.key
  
-    - name: Enable Opera repo
+    - name: Add apt repos 
       apt_repository:
-        repo: deb [arch=i386,amd64] https://deb.opera.com/opera-stable/ stable non-free
-        filename: opera-stable
- 
-    - name: Import MS GPG key
-      apt_key:
-        url: https://packages.microsoft.com/keys/microsoft.asc
- 
-    - name: Enable VS Code repo
-      apt_repository:
-        repo: deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main
-        filename: vscode
- 
+        repo: "{{ item.value }}"
+        filename: "{{ item.key }}"
+      loop: "{{ lookup ('dict', repos) }}"
+            
     - name: Install non standard packages
       apt:
-        name: "{{ packages }}"
-      vars:
-        packages:   
-        - code
-        - opera-stable
+        name: "{{ item.key }}"
+      when: not item.key == "vscode"
+      loop: "{{ lookup ('dict', repos) }}"
+
+    - name: Install the special kid
+      apt:
+        name: code
+
+    - name: Get installed Slack version
+      shell: slack -v
+      register: slack_version_installed
+
+    - name: Install Slack
+      when: not slack_version == slack_version_installed.stdout
+      apt:
+        deb: https://downloads.slack-edge.com/linux_releases/slack-desktop-{{ slack_version }}-amd64.deb
     
     - name: fetch VS Code extensions
       become: yes
@@ -86,4 +100,3 @@
         path: /etc/sysctl.conf
         state: present
         line: fs.inotify.max_user_watches=524288
-
