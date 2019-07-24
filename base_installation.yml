@@ -3,6 +3,9 @@
   vars:
     terraform_version: 0.10.8
     slack_version: 4.0.0
+    git_email: youremail@here 
+    git_username: yourusername
+    non_sudo_user: ubuntu
     tmp_dir: /tmp/ansible
     repos:
       enpass: deb https://apt.enpass.io/ stable main
@@ -15,6 +18,29 @@
         path: "{{ tmp_dir }}"
         state: directory
         mode: '755'
+
+    - name: Check git config
+      git_config:
+        list_all: yes
+      register: output
+      become: yes
+      become_user: "{{ non_sudo_user }}"
+
+    - name: Add git email
+      git_config:
+        name: user.email
+        scope: local
+        value: "{{ git_email }}"
+      when:
+        - '"user.email" not in output.config_values'
+    
+    - name: Add git user name
+      git_config:
+        name: user.name
+        scope: local
+        value: "{{ git_username }}"
+      when:
+        - '"user.name" not in output.config_values'
 
     - name: Upgrade Packages
       apt:
@@ -96,13 +122,13 @@
     
     - name: fetch VS Code extensions
       become: yes
-      become_user: ubuntu
+      become_user: "{{ non_sudo_user }}"
       shell: code --list-extensions
       register: vs_code_extensions
 
     - name: Install VS Code extensions
       become: yes
-      become_user: ubuntu
+      become_user: "{{ non_sudo_user }}"
       shell: code --install-extension "{{ item }}"
       when: item not in vs_code_extensions.stdout
       with_items:
