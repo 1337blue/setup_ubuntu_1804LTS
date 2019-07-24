@@ -1,13 +1,26 @@
 - name: Setup working environment
   hosts: localhost
   vars:
+    terraform_version: 0.10.8
     slack_version: 4.0.0
+    tmp_dir: /tmp/ansible
     repos:
       enpass: deb https://apt.enpass.io/ stable main
       opera-stable: deb [arch=i386,amd64] https://deb.opera.com/opera-stable/ stable non-free
       vscode: deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main
 
   tasks:
+    - name: Create tmp dir
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: '755'
+
+    - name: Upgrade Packages
+      apt:
+       update_cache: yes
+       upgrade: full
+
     - name: Install Packages
       apt:
         name: "{{ packages }}"
@@ -58,14 +71,28 @@
       apt:
         name: code
 
-    - name: Get installed Slack version
-      shell: slack -v
-      register: slack_version_installed
-
     - name: Install Slack
-      when: not slack_version == slack_version_installed.stdout
-      apt:
-        deb: https://downloads.slack-edge.com/linux_releases/slack-desktop-{{ slack_version }}-amd64.deb
+      snap:
+        name: slack
+        classic: yes
+
+    - name: Is latest terraform installed?
+      shell: terraform -v
+      register: is_terraform_installed
+      ignore_errors: yes
+
+    - name: Download terraform binary
+      get_url:
+        url: https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip
+        dest: "{{ tmp_dir }}"
+      when: (not is_terraform_installed.rc == 0 or not terraform_version in is_terraform_installed.stdout_lines[0])
+
+    - name: Install terraform
+      unarchive:
+        src: "{{ tmp_dir }}/terraform_{{ terraform_version }}_linux_amd64.zip"
+        dest: /usr/bin
+        mode: '755'
+      when: (not is_terraform_installed.rc == 0 or not terraform_version in is_terraform_installed.stdout_lines[0])
     
     - name: fetch VS Code extensions
       become: yes
@@ -100,3 +127,14 @@
         path: /etc/sysctl.conf
         state: present
         line: fs.inotify.max_user_watches=524288
+    
+    - name: Cleanup apt
+      apt:
+        autoremove: yes
+        autoclean: yes
+
+    - name: Cleanup tmp dir
+      file:
+        path: "{{ tmp_dir }}"
+        state: absent
+
