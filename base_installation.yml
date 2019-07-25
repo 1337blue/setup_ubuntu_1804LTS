@@ -3,10 +3,11 @@
   vars:
     terraform_version: 0.10.8
     slack_version: 4.0.0
-    git_email: youremail@here 
-    git_username: yourusername
+    git_email: -
+    git_username: -
     non_sudo_user: ubuntu
     tmp_dir: /tmp/ansible
+    vscode_settings: /home/{{ non_sudo_user }}/.config/Code/User/settings.json
     repos:
       enpass: deb https://apt.enpass.io/ stable main
       opera-stable: deb [arch=i386,amd64] https://deb.opera.com/opera-stable/ stable non-free
@@ -29,7 +30,7 @@
     - name: Add git email
       git_config:
         name: user.email
-        scope: local
+        scope: system
         value: "{{ git_email }}"
       when:
         - '"user.email" not in output.config_values'
@@ -37,7 +38,7 @@
     - name: Add git user name
       git_config:
         name: user.name
-        scope: local
+        scope: system
         value: "{{ git_username }}"
       when:
         - '"user.name" not in output.config_values'
@@ -67,6 +68,15 @@
         - iotop
         - virtualbox
         - linux-headers-generic
+    
+    - name: Pull and start jenkins container
+      docker_container:
+        name: jenkins 
+        image: jenkins/jenkins:lts
+        ports: 8080:8080
+      async: 600
+      poll: 0
+      register: jenkins_container
 
     # vagrant depends on virtualbox
     - name: Install Vagrant
@@ -148,6 +158,27 @@
       - tht13.python
       - vscodevim.vim
 
+    - name: Wait for asynchronous docker job to end
+      async_status:
+        jid: '{{ jenkins_container.ansible_job_id }}'
+      register: job_result
+      until: job_result.finished
+      retries: 30
+
+    - name: Check if vscode settings.json exists
+      stat:
+        path: "{{ vscode_settings }}"
+      register: st
+
+    - name: Copy vscode settings.json
+      copy:
+        src: ./settings.json
+        dest: "{{ vscode_settings }}"
+        owner: "{{ non_sudo_user }}"
+        group: "{{ non_sudo_user }}"
+        mode: '0644'
+      when: st.stat.exists == false
+     
     - name: Increase watch limit for VSCode
       lineinfile:
         path: /etc/sysctl.conf
@@ -163,4 +194,12 @@
       file:
         path: "{{ tmp_dir }}"
         state: absent
+
+    - name: Get jenkins admin pw
+      command: 'docker exec -i jenkins cat /var/jenkins_home/secrets/initialAdminPassword'
+      register: jenkins_admin_pw
+
+    - name: Print jenkins admin pw
+      debug: 
+        msg: 'Jenkins Admin PW: {{ jenkins_admin_pw.stdout_lines[0] }}'
 
