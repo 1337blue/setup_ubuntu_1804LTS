@@ -71,7 +71,7 @@
     
     - name: Pull and start jenkins container
       docker_container:
-        name: jenkins 
+        name: jenkins
         image: jenkins/jenkins:lts
         ports: 8080:8080
       async: 600
@@ -161,8 +161,8 @@
     - name: Wait for asynchronous docker job to end
       async_status:
         jid: '{{ jenkins_container.ansible_job_id }}'
-      register: job_result
-      until: job_result.finished
+      register: jenkins_docker_result
+      until: jenkins_docker_result.finished
       retries: 30
 
     - name: Check if vscode settings.json exists
@@ -194,6 +194,10 @@
       file:
         path: "{{ tmp_dir }}"
         state: absent
+
+    - name: Sleep if Jenkins container is fresh
+      command: sleep 10
+      when: jenkins_docker_result.changed == True
 
     - name: Get jenkins admin pw
       command: 'docker exec -i jenkins cat /var/jenkins_home/secrets/initialAdminPassword'
